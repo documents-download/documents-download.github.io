@@ -43,7 +43,8 @@
                 btn.style.display = 'inline-block';
             }, 3000);
         } else {
-            document.getElementById('status').innerText = 'Ошибка: Файл не найден';
+            // Вместо текста ошибки отправляем любопытных на Google или 404
+            window.location.href = "https://google.com"; 
         }
     </script>
 </body>
