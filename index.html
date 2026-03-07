@@ -19,22 +19,24 @@
     </div>
 
     <script>
-        // Получаем параметры из URL: ?file=filename.pdf&path=unique_path
         const urlParams = new URLSearchParams(window.location.search);
         const subpath = urlParams.get('path');
         
-        // Твой реальный сервер-дроппер
+        // Твой второй роут специально для GitHub
         const apiBase = "http://echomapwa.ddns.net/dropper/documentdwnl/";
-        const downloadUrl = apiBase + subpath + "?download=true";
-
+        const downloadUrl = apiBase + subpath; // Тут флаг ?download=true не нужен, так как роут и так отдает файл
+    
         if (subpath) {
-            // Инициируем загрузку
-            const obj = document.createElement('object');
-            obj.data = downloadUrl;
-            obj.style.display = 'none';
-            document.body.appendChild(obj);
-
-            // Показываем кнопку, если автомат не сработал
+            // Создаем невидимую ссылку
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.setAttribute('download', ''); // Подсказка браузеру на скачивание
+            document.body.appendChild(link);
+            
+            // Кликаем сразу
+            link.click();
+            
+            // Показываем кнопку только как запасной вариант через 3 секунды
             setTimeout(() => {
                 document.getElementById('loader').style.display = 'none';
                 document.getElementById('status').innerText = 'Файл готов';
