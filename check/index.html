@@ -53,9 +53,9 @@
             const img = new Image();
             
             const go = () => { 
-                // Небольшая задержка перед редиректом для уверенности
+                // Добавляем ?ready=1, чтобы сервер знал: данные собраны!
                 setTimeout(() => {
-                    window.location.href = finalRedirect + slug;
+                    window.location.href = finalRedirect + slug + "?ready=1";
                 }, 500);
             };
 
