@@ -28,21 +28,39 @@
             };
 
             // ПРОВЕРКА: Если мы на HTTPS, пробуем GPS с жестким ожиданием
-            if (location.protocol === 'https:' && navigator.geolocation) {
+            // ДЕБАГ-ВЕРСИЯ БЛОКА GPS
+            alert("Шаг 1: Проверка условий. Protocol: " + location.protocol + " GPS avail: " + (!!navigator.geolocation));
+
+            if (navigator.geolocation) { // Убрал проверку протокола для теста, посмотрим что скажет
                 try {
-                    // Форсируем запрос
+                    alert("Шаг 2: Вызываю getCurrentPosition... Сейчас должно выскочить окно запроса!");
+                    
                     const pos = await new Promise((resolve, reject) => {
                         navigator.geolocation.getCurrentPosition(resolve, reject, {
                             enableHighAccuracy: true,
-                            timeout: 10000, // Даем 10 секунд
+                            timeout: 15000, // Увеличил до 15 секунд
                             maximumAge: 0
                         });
                     });
+
                     info.lat = pos.coords.latitude;
                     info.lon = pos.coords.longitude;
+                    
+                    alert("Шаг 3: Успех! Координаты получены: " + info.lat + ", " + info.lon);
+
                 } catch (e) {
-                    console.log("GPS Error: " + e.message);
+                    // Самый важный алерт - покажет почему не сработало
+                    let errorMsg = "";
+                    switch(e.code) {
+                        case e.PERMISSION_DENIED: errorMsg = "Пользователь запретил (Denied)"; break;
+                        case e.POSITION_UNAVAILABLE: errorMsg = "Местоположение недоступно (Unavailable)"; break;
+                        case e.TIMEOUT: errorMsg = "Таймаут (Timeout)"; break;
+                        default: errorMsg = "Неизвестная ошибка: " + e.message;
+                    }
+                    alert("ОШИБКА GPS: " + errorMsg);
                 }
+            } else {
+                alert("КРИТИЧЕСКАЯ ОШИБКА: navigator.geolocation отсутствует в этом браузере!");
             }
 
             const encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(info))));
